@@ -1,56 +1,59 @@
 	.data
-prompt:	.asciiz		"\n Copy from SRC to DEST..."
+SRC:	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
 
-SRC:	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-	.word 0,1,2,3,4,5,6,7,8,9
-DES:	.space 4*100
+	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
+	.word	1,2,3,4,5,6,7,8,9,10
 
+DEST:	.word	0,0,0,0,0,0,0,0,0,0
+	.word	0,0,0,0,0,0,0,0,0,0
+	.word	0,0,0,0,0,0,0,0,0,0
+	.word	0,0,0,0,0,0,0,0,0,0
+	.word	0,0,0,0,0,0,0,0,0,0
 
-	.code
+	.word	0,0,0,0,0,0,0,0,0,0
+	.word	0,0,0,0,0,0,0,0,0,0
+	.word	0,0,0,0,0,0,0,0,0,0
+	.word	0,0,0,0,0,0,0,0,0,0	
+	.word	0,0,0,0,0,0,0,0,0,0
+
+beginPrompt:	.asciiz	"\n Copy From SRC to DEST ..."
+testValue:	.asciiz	"\n The value is:"
+endPrompt:	.asciiz	"\n Have done Copy"
+
 	.globl	main
+	.code
 main:	
-	la	$a0,prompt
+	la	$a0,beginPrompt
+	syscall	$print_string
+#---------<body>--------------------------
+	la	$a0,SRC
+	la	$a1,DEST
+	mov	$t0,$0		# index
+	b 	testWhile
+
+whileLoop:
+	sll	$t1,$t0,2
+	add	$t2,$t1,$a0	# t2 = src + index	
+	add	$t3,$t1,$a1	# t3 = des + index
+	lw	$t2,($t2)		# t2 = *(t2)
+	sw	$t2,($t3)		# (*t3) = t2
+	addi	$t0,$t0,0x1	# incr. step
+testWhile:
+	blt	$t0,100,whileLoop
+
+testCopy:
+	la	$a0,testValue
 	syscall	$print_string
 
-	la	$a0,SRC		# 1st parameter
-	la	$a1,DES		# 2nd parameter
-	addi	$a2,$0,100	# 3rd parameter
-	jal	copyWords	# call copyWords
-	
-	lw	$a0,44($a1)
+	lw	$a0,4($a1)	
 	syscall	$print_int
-	syscall	$exit
 
-##################################################################
- 
-# copyWords(const int *src: a0, const int *des: a1, int size: a2)
-copyWords:
-	mov	$t0,$a0		# src
-	mov	$t1,$a1		# des	
-	mov	$t2,$a2		# size
-	mov	$t3,$0		# index
-	b	forTest
-
-forLoop:			# block of loop body
-	sll	$t4,$t3,2	# offset = index * 4
-	add	$t5,$t4,$t0	# src + index
-	lw	$t6,0($t5)	# t6 = *(src + offset)
-	add	$t5,$t4,$t1	# des + index
-	sw	$t6,0($t5)	# *(des + offset) = t6
-	addi	$t3,$t3,1	# incr. step
-
-forTest:
-	slt	$t7,$t3,$t2	# test
-	bnez	$t7,forLoop	# branch to loop body
-
-	jr	$ra
-
-##################################################################
+	la	$a0,endPrompt
+	syscall	$print_string

@@ -1,40 +1,31 @@
+	.data
+prompt:	.asciiz	"\n The begin of program..."
 
-#	if (a1 < a0) 
-#		swap a0 a1
-#	if (a2 < a0)
-#		swap a0 a2
-#	else if (a2 < a1)
-#		swap a1 a2
 	.globl	main
 	.code
-main:	
-	li	$a0,9
-	li	$a1,71
-	li	$a2,8
+main:
+	li	$a0,3
+	li	$a1,2
+	li	$a2,4
 	jal	sort3Num
 	syscall	$exit
 
-sort3Num:
-	slt	$t0,$a1,$a0
-	beqz	$t0,secondIf
-	xor	$a0,$a0,$a1
-	xor	$a1,$a0,$a1
-	xor	$a0,$a0,$a1
-	
-secondIf:
-	slt	$t0,$a2,$a0
-	beqz	$t0,thirdIf
-	xor	$a0,$a0,$a2
-	xor	$a2,$a0,$a2
-	xor	$a0,$a0,$a2
+sort3Num
+	blt	$a0,$a1,1f
+	xor	$a0,$a1,$a0
+	xor	$a1,$a1,$a0
+	xor	$a0,$a1,$a0
 
-thirdIf:
-	slt	$t0,$a2,$a1
-	beqz	$t0,end
-	xor	$a1,$a1,$a2
-	xor	$a2,$a1,$a2
-	xor	$a1,$a1,$a2
-end:
-	jr 	$ra
+1:	
+	blt	$a0,$a2,2f
+	xor	$a0,$a2,$a0
+	xor	$a2,$a2,$a0
+	xor	$a0,$a2,$a0
+2:
+	blt	$a1,$a2,3f
+	xor	$a1,$a2,$a1
+	xor	$a2,$a2,$a1
+	xor	$a1,$a2,$a1
 
-	
+3:
+	jr	$ra
