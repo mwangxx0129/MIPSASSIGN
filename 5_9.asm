@@ -1,3 +1,46 @@
+#--------------------------------------------------------------
+#a0 = read_string;		// input: string
+#v0 = 0				// output: integer result
+#v1 = 0				// output: error decimal
+#
+#t1 = *(a0)
+#if ( *a0 == 1) 			// negative
+#{
+#	t7 = 1;
+#	a0 ++;
+#}
+#
+#t1 = *(a0 ) 			// get curt char
+#while (t1 >= '0' && t1 <= '9')
+#{
+#	t1 = *(a0 ) 		// get curt char
+#	v0  *= 10		// mult 10
+#	v0  +=  t1		// plus char 
+#
+#	//overflow
+#	if (v0 > 0x7fff ffff + t7)
+#	{
+#		overflow
+#		exit	
+#	}
+#	a0 ++;			// incr. t0
+#} 
+#
+#if (t1 != '\0' && t1 != '\n' && t1 != ' ' && t1 != '\t')
+#{
+#	v0 = 0
+#	v1 = 1;
+#	print prompt isValid input, Enter again
+#}
+#
+#if (t7 == 1) 			// two complement 's
+#{
+#	! v0
+#	v0 ++
+#}
+#
+#--------------------------------------------------------------
+
 #--------------data---------------------------
 	.data
 buffer:		.asciiz	"abcdefgh+-09AZa z.\t\n"
