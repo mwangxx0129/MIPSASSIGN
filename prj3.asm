@@ -378,31 +378,76 @@ stateTable:
 4:	lw	$t0,($t4)		# load nex state
 	lw	$t3,word($t4)		# load action routine
 	sw	$t0,state($gp)		# save the new state
-	addi	$a0,$0,1		# pass true ?
+	addi	$a0,$0,1		# pass true 
 	jr	$t3
 card.expose1:
 	sw	$s0,card1($gp)
-	sb	$a0,card.faceup($s0)
+5:	sb	$a0,card.faceup($s0)
 	lw	$t0,turns($gp)
-
-	j	card.draw
-card.error:
-	j	polling
-card.expose2:
-	
-card.cover1:
-	sb	$0,card.faceup($s0)	# face down
+	addi	$t0,$t0,1
+	sw	$t0,turns($gp)
 	j	card.draw
 
+card.expose2
+	sw	$s0,card2($gp)
+	b	5b
+
+card.cover1
+	sw	$0,card1($gp)
+	sb	$0,card.faceup($s0)
+	j	card.draw
 card.matchExp1:
-	j	card.draw
+	addi	$sp,$sp,-4	# allocate space on the stack 
+	sw	$ra,($sp)
+
+	mov	$s1,$s0
+	sb	$a0,card.faceup($s0)
+	jal	card.draw
+
+	sb	$0,card.faceup($a1)
+	mov	$s0,$a1
+	jal	card.draw
+	
+	sb	$0,card.faceup($a2)
+	mov	$s0,$a2
+	jal	card.draw
+
+	sw	$s1,card1($gp)	# no match 
+	sw	$0,card2($gp)
+
+	lw	$ra,($sp)
+	addi	$sp,$sp,4
+	jr	$ra
+
+card.error:
+	jr	$ra
 
 card.match:
-	j	card.draw
+	addi	$sp,$sp,-4
+	sw	$ra,($sp)
 
+	lw	$t0,card.word($a1)
+	lw	$t1,card.word($a2)
+	bne	$t0,$t1,2f
+	
+1:	# set hide
+	sb	$a0,card.hide($a1)	# a0 is 1 now
+	sb	$a0,card.hide($a2)
 
+	mov	$s0,$a1
+	jal	card.draw
+	
+	mov	$s0,$a2
+	jal	card.draw
 
+2:	# face down
+	jal	card.matchExp1
+	sw	$0,card1($gp)	# no match 
+	sw	$0,card2($gp)
 
+	lw	$ra,($sp)
+	addi	$sp,$sp,-4
+	jr	$ra
 
 # ---------------------------------------------------------------------
 	.code
@@ -563,6 +608,10 @@ main:
 	bne	$s4,$s2,2b
 
 	sw	$0,state($gp)
+	sw	$0,card1($gp)
+	sw	$0,card2($gp)
+	sw	$0,turns($gp)
+
 #	la	$a0,exit
 #	syscall	$print_string
 #	syscall	$read_char
