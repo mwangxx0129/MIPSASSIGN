@@ -351,7 +351,7 @@ card.draw:
 	addi	$sp,$sp,24	# deallocate stack space
 	jr	$ra
 ###############################################################################
-card.click:	#void card.click(card * this)
+card.click:	#void card.click(card * this : s0)
 	.extern state,word		# static int state = 0
 	.extern card1,word		# card pointer to 1st exposed card
 	.extern card2,word		# card pointer to 2nd exposed card
@@ -371,29 +371,34 @@ stateTable:
 	lw	$a2,card2($gp)
 	la	$t4,stateTable
 	sll	$t0,$t0,4
-	add	$t4,$t4,$t0		# times 5
+	add	$t4,$t4,$t0		
 	beq	$a1,$s0,3f
 	bne	$a2,$s0,4f
 3:	addi	$t4,$t4,word*2
-4:	lw	$t0,($t4)
-	lw	$t3,word($t4)
-	sw	$t0,state($gp)
-	addi	$a0,$0,1
+4:	lw	$t0,($t4)		# load nex state
+	lw	$t3,word($t4)		# load action routine
+	sw	$t0,state($gp)		# save the new state
+	addi	$a0,$0,1		# pass true ?
 	jr	$t3
 card.expose1:
 	sw	$s0,card1($gp)
 	sb	$a0,card.faceup($s0)
 	lw	$t0,turns($gp)
+
 	j	card.draw
 card.error:
 	j	polling
 card.expose2:
 	
 card.cover1:
+	sb	$0,card.faceup($s0)	# face down
+	j	card.draw
 
 card.matchExp1:
+	j	card.draw
 
 card.match:
+	j	card.draw
 
 
 
@@ -557,6 +562,7 @@ main:
 	addi	$s4,$s4,1
 	bne	$s4,$s2,2b
 
+	sw	$0,state($gp)
 #	la	$a0,exit
 #	syscall	$print_string
 #	syscall	$read_char
@@ -564,10 +570,7 @@ main:
 #	syscall	$exit		
 # ---------------------------------------------------------------------
 	.data
-	.align 2
-# Card* mouseMap[128] ??
-
-	
+	.align 2	
 	.code
 # ---------------------------------------------------------------------
 polling:
@@ -591,8 +594,15 @@ polling:
 	lw	$s0,($a0)
 	beqz	$s0,polling
 
-	addi	$t0,1
-	sb	$t0,card.faceup($s0)
-	jal	card.draw
-	
-	syscall	$exit	
+	jal	card.click
+	b	polling
+
+	addi	$a0,$0,0
+	addi	$a1,$0,24
+	syscall	$xy
+
+	la	$a0,exit
+	syscall	$print_string
+	syscall	$read_char
+	bne	$v0,'x,main
+	syscall	$exit		
