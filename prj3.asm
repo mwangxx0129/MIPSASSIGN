@@ -1,5 +1,5 @@
-######################## Code modified from Dr.Doering  #########################
-# { box class
+######################## Code modified from Dr. Doering  #########################
+# { box class --------------------------------------------------------------------
 box:	.struct
 ul:	.byte	0			# upper left
 top:	.byte	0
@@ -14,20 +14,45 @@ lr:	.byte	0			# lower right
 # { instances of box}
 boxBlank:
 	.ascii	"         "
-boxd:	.ascii	"…Õª"
+boxd:	
+	.ascii	"…Õª"
 	.ascii	"∫∞∫"
 	.ascii	"»Õº"
-boxs:	.ascii	"⁄ƒø"
+boxs:	
+	.ascii	"⁄ƒø"
 	.ascii	"≥ ≥"
 	.ascii	"¿ƒŸ"
-boxw:	.ascii	"‹‹‹"
+boxw:	
+	.ascii	"‹‹‹"
 	.ascii	"› ﬁ"
 	.ascii	"ﬂﬂﬂ"
-boxg1:	.ascii	"∞∞∞∞ ∞∞∞∞"
-boxb:	.ascii	"€€€€ €€€€"
+boxg1:	
+	.ascii	"∞∞∞∞ ∞∞∞∞"
+boxb:	
+	.ascii	"€€€€ €€€€"
+
+# Frame Pointer Offsets-----------------------------------------------------------
+fp.ra = 4
+fp.fp = 0 # may be omitted
+fp.a0 = 8
+fp.a1 = 12
+fp.a2 = 16
+fp.a3 = 20
+fp.a4 = 24 # has no register counterpart
+fp.a5 = 28
+fp.a6 = 32
+fp.a7 = 36 # user may define higher  a s
+fp.s0 = -4
+fp.s1 = -8
+fp.s2 = -12
+fp.s3 = -16
+fp.s4 = -20
+fp.s5 = -24
+fp.s6 = -28
+fp.s7 = -32
+fp.loc = -36 # offsets can be added to this!
 
 #-------------------------------------------------------------------------------
-
 # void box::draw(int x:a0, int y:a1, int w:a2, int h:a3,box *this:s0)
 	.code
 box.draw:
@@ -222,8 +247,21 @@ y:	.byte 	0
 hide:	.byte 	0
 faceup: .byte   0
 	.code
-
-#{ card.new(int x:a0, int y:a1, wordString w:a2, bool faceup:a3)
+###############################################################################
+# card * card.new(int x:a0, int y:a1, wordString w:a2, bool faceup:a3)
+# argument:
+#	a0 : x
+#	a1 : y
+#	a2 : word
+#	a3 : faceup	
+# returns:
+#	s0(v0) : this pointer
+# uses:
+#	t0
+#	v0
+#------------------------------------------------------------------------------
+# pseudocode
+#------------------------------------------------------------------------------
 card.new:
 	mov	$t0,$a0		# save $a0
 	addi	$a0,$0,card	# card is size
@@ -240,18 +278,80 @@ card.card:
 	sb	$0,card.hide($s0)
 	jr 	$ra
 
-#{ card.draw(card * this:s0)
+###############################################################################
+# void card.draw(card * s0)
+# argument:
+#	s0 : pointer to card
+# returns:
+#	void
+# uses:
+#	a0,a1,a2
+#	t0,t1
+#------------------------------------------------------------------------------
+# pseudocode
+# 
+# if (hide)
+#	draw blank
+# else if (!faceup)
+#	draw facedown
+# else 
+#	draw faceup 
+#	draw string
+#
+#------------------------------------------------------------------------------
 card.draw:
+	addi	$sp,$sp,-24	# allocate space on the stack 
+	sw	$fp,4($sp)	# save previous frame pointer
+	addi	$fp,$sp,4	# create new frame pointer
+	sw	$ra,fp.ra($fp)	# save return address
+	sw	$s0,fp.s0($fp)	# save s0
+	sw	$a0,fp.a0($fp)	# save a0
+	sw	$a1,fp.a1($fp)  # save a1
+	sw	$a2,fp.a2($fp)	# save a2	
+
+	lw	$s0,fp.s0($fp)	# get card pointer
+	lb	$a0,card.x($s0)	# draw(int x:a0, int y:a1, int w:a2, int h:a3,box *this:s0)
+	lb	$a1,card.y($s0)
+	li	$a2,3			# width of middle of box
+	li	$a3,1			# height of middle of box
+	lb	$t0,card.faceup($s0)
+	lb	$t1,card.hide($s0)
+
+	beqz	$t1,2f	
+	la	$s0,boxBlank	# draw blank
+	jal	box.draw 
+	b	1f
+
+2:	bnez	$t0,3f
+	la	$s0,boxd	# draw facedown
+	jal	box.draw
+	b	1f
+
+3:	
+	la	$s0,boxs	# draw faceup
+	jal	box.draw
+
+	lw	$s0,fp.s0($fp)	# draw string
+	lb	$a0,card.x($s0)
+	lb	$a1,card.y($s0)
+	addi	$a0,1		# move cursor
+	addi	$a1,1
 	syscall	$xy
-	mov	$a0,$s0
-	mov	$a1,$0
-	mov	$a2,$0
+
+	lw	$s0,fp.s0($fp)
+	mov	$a0,$s0		# get pointer of card
 	syscall	$print_string
 
+1:	lw	$a0,fp.a0($fp)	# restore a registers
+	lw	$a1,fp.a1($fp)
+	lw	$a2,fp.a2($fp)
+	lw	$s0,fp.s0($fp)	# restore s register
+	lw	$ra,fp.ra($fp)	# restore the return address
+	lw	$fp,0($fp)	# restore previous Frame Pointer
+	addi	$sp,$sp,24	# deallocate stack space
 	jr	$ra
-# }
-
-card.click	#void card.click(card * this)
+###############################################################################
+card.click:	#void card.click(card * this)
 	.extern state,word		# static int state = 0
 	.extern card1,word		# card pointer to 1st exposed card
 	.extern card2,word		# card pointer to 2nd exposed card
@@ -284,8 +384,9 @@ card.expose1:
 	sw	$s0,card1($gp)
 	sb	$a0,card.faceup($s0)
 	lw	$t0,turns($gp)
+	j	card.draw
 card.error:
-
+	j	polling
 card.expose2:
 	
 card.cover1:
@@ -293,50 +394,6 @@ card.cover1:
 card.matchExp1:
 
 card.match:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -405,10 +462,10 @@ mousemiddle 	= 32
 doubleclick 	= 64
 		.data			#
 		.align 2		# force word alignment }
-
+mouseMap:	.space	128*4
 		.code
 mouseMap.clear:
-#	la	$t0,mouseMap
+	la	$t0,mouseMap
 	addi	$t1,$t0,128*word
 1:	sw	$0,($t0)
 	addi	$t0,$t0,word
@@ -460,7 +517,7 @@ main:
 	jal	Randomize
 	mov	$a0,$s3
 	jal	ChooseWords
-#	jal	mouseMap.clear		# project 3
+	jal	mouseMap.clear		# project 3
 	la	$a0,deck
 	mov	$a1,$s3
 	jal	Shuffle
@@ -472,47 +529,44 @@ main:
 	la	$s0,boxs
 	mov	$s4,$0			# working counters y
 	mov	$s3,$0			# 		   x
-2:	li	$a2,3			# width of middle of box
-	li	$a3,1			# height of middle of box
-	sll	$a0,$s3,2
+
+2:	sll	$a0,$s3,2
 	add	$a0,$a0,$s3		# x = 5 * s3
 	sll	$a1,$s4,1
-	add	$a1,$a1,$s4		# y = 3 * s4
-	la	$s0,boxs
-	jal	box.draw
-	
-	#--------------------
-
-	# card.new(int x:a0, int y:a1, wordString w:a2, bool faceup:a3)
-	
-	sll	$a0,$s3,2
-	add	$a0,$a0,$s3		# x = 5 * s3
-	sll	$a1,$s4,1
-	add	$a1,$a1,$s4		# y = 3 * s4
-
-	addi	$a0,1
-	addi	$a1,1
-	lw	$a2,($s5)
+	add	$a1,$a1,$s4		# y = 3 * s4	
+	lw	$a2,($s5)		# string of card
 	addi	$a3,$0,0x0		# set face down
-	jal	card.new
-	jal	card.draw
-	
+					# card.new(int x:a0, int y:a1, wordString w:a2, bool faceup:a3)
+	jal	card.new		# return s0 as current pointer
+	sw	$s0,($s5)		# replace string with pointer
+
+
+	sll	$t0,$s4,word		# mouseMap[y * 16 + x] = s0
+	add	$t0,$t0,$s3
+	sll	$t0,$t0,2		# word
+	la	$t1,mouseMap
+	add	$t0,$t0,$t1
+
+	sw	$s0,($t0)
+
+	jal	card.draw	
 	addi	$s5,$s5,word
 	addi	$s3,$s3,1		
 	bne	$s3,$s1,2b
 	mov	$s3,$0
 	addi	$s4,$s4,1
 	bne	$s4,$s2,2b
-	la	$a0,exit
-	syscall	$print_string
-	syscall	$read_char
-	bne	$v0,'x,main
-	syscall	$exit		
+
+#	la	$a0,exit
+#	syscall	$print_string
+#	syscall	$read_char
+#	bne	$v0,'x,main
+#	syscall	$exit		
 # ---------------------------------------------------------------------
 	.data
 	.align 2
-# Card* mouseMap[128]
-mouseMap:	.space	128*4
+# Card* mouseMap[128] ??
+
 	
 	.code
 # ---------------------------------------------------------------------
@@ -535,3 +589,10 @@ polling:
 	la	$a1,mouseMap		# s0 = mouseMap(y * 16 + x)
 	add	$a0,$a0,$a1
 	lw	$s0,($a0)
+	beqz	$s0,polling
+
+	addi	$t0,1
+	sb	$t0,card.faceup($s0)
+	jal	card.draw
+	
+	syscall	$exit	
